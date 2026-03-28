@@ -85,6 +85,8 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
+      "^@prisma/client$": "<rootDir>/test/mocks/prisma-client.ts",
+      "^@prisma/adapter-pg$": "<rootDir>/test/mocks/prisma-adapter-pg.ts",
       "^src/(.*)$": "<rootDir>/src/$1"
     }
   }
