@@ -1,0 +1,140 @@
+# Build, test and deploy our nestjs api to production
+
+name: CI/CD Nestjs to ECR then EC2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  # CI Code Checks
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 25.2.1 #use same version to avoid surprise later
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./api
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        working-directory: ./api
+
+      - name: Lint
+        run: npm run lint:ci
+        working-directory: ./api
+
+      - name: Run tests
+        run: npm test
+        working-directory: ./api
+
+      - name: NPM audit (high severity)
+        run: npm audit --audit-level=high | true
+        working-directory: ./api
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Login to AWS via OIDC instead of using AWS secrets access key that is dangerous
+      - name: Configure AWS OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Login to ECR
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+
+      # Build Docker Image
+      - name: Build Docker Image
+        run: docker build --no-cache -t youtube-nestjsapi-ecommerce:latest ./api
+
+      # Tag Docker Image for ECR
+      - name: Tag Docker Image to ECR
+        run: docker tag youtube-nestjsapi-ecommerce:latest ${{ secrets.ECR_REPOSITORY }}:latest
+
+      # Push Docker image
+      - name: Push Docker image to ECR
+        run: docker push ${{ secrets.ECR_REPOSITORY }}:latest
+
+      #Deploy to EC2
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+
+            set -e
+
+            # Login to ECR
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }} 
+
+            docker pull ${{ secrets.ECR_REPOSITORY }}:latest
+
+            docker stop youtube-nestjsapi-ecommerce || true
+            docker rm youtube-nestjsapi-ecommerce || true
+
+            SECRETS_JSON=$(aws secretsmanager get-secret-value \
+              --secret-id nestjs-prod-secrets \
+              --query SecretString \
+              --output text)
+
+            export DATABASE_USER=$(echo $SECRETS_JSON | jq -r .DATABASE_USER)
+            export DATABASE_PASSWORD=$(echo $SECRETS_JSON | jq -r .DATABASE_PASSWORD)
+            export DATABASE_NAME=$(echo $SECRETS_JSON | jq -r .DATABASE_NAME)
+            export DATABASE_HOST=$(echo $SECRETS_JSON | jq -r .DATABASE_HOST)
+            export DATABASE_PORT=$(echo $SECRETS_JSON | jq -r .DATABASE_PORT)
+            export DATABASE_URL=$(echo $SECRETS_JSON | jq -r .DATABASE_URL)
+            export PORT=$(echo $SECRETS_JSON | jq -r .PORT)
+            export ALLOWED_ORIGINS=$(echo $SECRETS_JSON | jq -r .ALLOWED_ORIGINS)
+            export JWT_SECRET=$(echo $SECRETS_JSON | jq -r .JWT_SECRET)
+            export JWT_EXPIRES_IN=$(echo $SECRETS_JSON | jq -r .JWT_EXPIRES_IN)
+            export JWT_REFRESH_SECRET=$(echo $SECRETS_JSON | jq -r .JWT_REFRESH_SECRET)
+            export JWT_REFRESH_EXPIRES_IN=$(echo $SECRETS_JSON | jq -r .JWT_REFRESH_EXPIRES_IN)
+            export NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$(echo $SECRETS_JSON | jq -r .NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+            export STRIPE_SECRET_KEY=$(echo $SECRETS_JSON | jq -r .STRIPE_SECRET_KEY)
+
+            docker run -d \
+              -p $PORT:$PORT \
+              --name youtube-nestjsapi-ecommerce \
+              --log-driver=awslogs \
+              --log-opt awslogs-region=${{ secrets.AWS_REGION }} \
+              --log-opt awslogs-group=youtubenestapi-app \
+              --log-opt awslogs-stream=app-logs \
+              -e  DATABASE_USER \
+              -e  DATABASE_PASSWORD \
+              -e  DATABASE_NAME \
+              -e  DATABASE_HOST \
+              -e  DATABASE_PORT \
+              -e  DATABASE_URL \
+              -e  PORT \
+              -e  ALLOWED_ORIGINS \
+              -e  JWT_SECRET \
+              -e  JWT_EXPIRES_IN \
+              -e  JWT_REFRESH_SECRET \
+              -e  JWT_REFRESH_EXPIRES_IN \
+              -e  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+              -e  STRIPE_SECRET_KEY \
+              ${{ secrets.ECR_REPOSITORY }}:latest
