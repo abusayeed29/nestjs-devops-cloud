@@ -115,28 +115,6 @@ export function CategorySection({ selectedId, onSelect }: CategorySectionProps) 
           </div>
         </div>
 
-        {/* "All" chip + scrollable categories */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
-          <button
-            onClick={() => onSelect(null)}
-            style={{ padding: "6px 16px", borderRadius: "20px", fontSize: "13px", fontWeight: 600, border: `2px solid ${selectedId === null ? "#3c50e0" : "#e5e7eb"}`, background: selectedId === null ? "#3c50e0" : "#fff", color: selectedId === null ? "#fff" : "#374151", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" }}
-          >
-            All Products
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleSelect(cat.id)}
-              style={{ padding: "6px 16px", borderRadius: "20px", fontSize: "13px", fontWeight: 600, border: `2px solid ${selectedId === cat.id ? "#3c50e0" : "#e5e7eb"}`, background: selectedId === cat.id ? "#3c50e0" : "#fff", color: selectedId === cat.id ? "#fff" : "#374151", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" }}
-            >
-              {cat.name}
-              {cat.productCount > 0 && (
-                <span style={{ marginLeft: "6px", fontSize: "11px", opacity: 0.75 }}>({cat.productCount})</span>
-              )}
-            </button>
-          ))}
-        </div>
-
         {/* Scrollable circle cards */}
         <div
           ref={scrollRef}
