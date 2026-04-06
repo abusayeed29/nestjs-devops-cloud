@@ -1,0 +1,29 @@
+npx prisma migrate dev --name init
+
+npx nest g service prisma
+
+npx nest g module modules/auth
+npx nest g controller modules/auth
+
+npm i bcrypt
+
+JSON web token -  in nestJs we use nestjs/jwt not jsonwebtoken
+
+nesths/jwt => jwtModule, jwtService
+jswtService.signAsync()
+
+npm i @nestjs/jwt
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+node -e "console.log(require('crypto').randomBytes(124).toString('hex'))"
+
+
+
+https://console.neon.tech/app/projects/frosty-shadow-50009218/branches/br-lucky-mud-a4e1nqx2/tables?database=devops_ecom
+
+
+http://localhost:3001/api/v1
+http://localhost:3001/api/docs
+
+
+After creating database

@@ -1,0 +1,249 @@
+// Modal overlay
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999; // Top-most layer
+  padding: 1rem;
+  overflow-y: auto; // Allow scrolling if modal is too tall
+}
+
+// Modal card
+.modal {
+  background: var(--card);
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    background-color: white;
+}
+
+// Modal header
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 0;
+  }
+}
+
+// Close button
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--accent);
+    color: var(--foreground);
+  }
+}
+
+// Modal content with scroll if needed
+.modalContent {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1; // Fill remaining height
+}
+
+// Section
+.section {
+  margin-bottom: 2rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 0 0 1rem 0;
+  }
+}
+
+// Grid for info
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.value {
+  font-size: 1rem;
+  color: var(--foreground);
+}
+
+// Shipping address
+.address {
+  padding: 1rem;
+  background: var(--muted);
+  border-radius: 8px;
+  color: var(--foreground);
+  line-height: 1.6;
+  margin: 0;
+}
+
+// Order items list
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--muted);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.itemName {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.itemQuantity {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.itemPricing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.itemPrice {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.itemSubtotal {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+// Status update section
+.statusUpdate {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.statusSelect {
+  flex: 1;
+  padding: 0.75rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 1rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+}
+
+.updateButton {
+  padding: 0.75rem 1.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .modalHeader h2 {
+    font-size: 1.25rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .itemPricing {
+    align-items: flex-start;
+  }
+
+  .statusUpdate {
+    flex-direction: column;
+  }
+
+  .statusSelect {
+    width: 100%;
+  }
+}

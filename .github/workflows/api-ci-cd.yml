@@ -51,9 +51,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Login to AWS via OIDC instead of using AWS secrets access key that is dangerous
-      - name: Configure AWS OIDC
-        uses: aws-actions/configure-aws-credentials@v2
+      # Login 
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
@@ -66,11 +64,11 @@ jobs:
 
       # Build Docker Image
       - name: Build Docker Image
-        run: docker build --no-cache -t youtube-nestjsapi-ecommerce:latest ./api
+        run: docker build --no-cache -t devops-nestjsapi-ecommerce:latest ./api
 
       # Tag Docker Image for ECR
       - name: Tag Docker Image to ECR
-        run: docker tag youtube-nestjsapi-ecommerce:latest ${{ secrets.ECR_REPOSITORY }}:latest
+        run: docker tag devops-nestjsapi-ecommerce:latest ${{ secrets.ECR_REPOSITORY }}:latest
 
       # Push Docker image
       - name: Push Docker image to ECR
@@ -93,8 +91,8 @@ jobs:
 
             docker pull ${{ secrets.ECR_REPOSITORY }}:latest
 
-            docker stop youtube-nestjsapi-ecommerce || true
-            docker rm youtube-nestjsapi-ecommerce || true
+            docker stop devops-nestjsapi-ecommerce || true
+            docker rm devops-nestjsapi-ecommerce || true
 
             SECRETS_JSON=$(aws secretsmanager get-secret-value \
               --secret-id nestjs-prod-secrets \
@@ -118,10 +116,10 @@ jobs:
 
             docker run -d \
               -p $PORT:$PORT \
-              --name youtube-nestjsapi-ecommerce \
+              --name devops-nestjsapi-ecommerce \
               --log-driver=awslogs \
               --log-opt awslogs-region=${{ secrets.AWS_REGION }} \
-              --log-opt awslogs-group=youtubenestapi-app \
+              --log-opt awslogs-group=devopsnestapi-app \
               --log-opt awslogs-stream=app-logs \
               -e  DATABASE_USER \
               -e  DATABASE_PASSWORD \

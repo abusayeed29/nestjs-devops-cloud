@@ -28,6 +28,15 @@ export class ProductsService {
       );
     }
 
+    const category = await this.prisma.category.findUnique({
+      where: { id: createProductDto.categoryId },
+    });
+    if (!category) {
+      throw new BadRequestException(
+        `Category with id ${createProductDto.categoryId} does not exist`,
+      );
+    }
+
     const product = await this.prisma.product.create({
       data: {
         ...createProductDto,

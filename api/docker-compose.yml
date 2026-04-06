@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: youtube-nestjsapi-ecommerce
+    container_name: devops-nestjsapi-ecommerce
     ports:
       - '${PORT}:3000'
     environment:
