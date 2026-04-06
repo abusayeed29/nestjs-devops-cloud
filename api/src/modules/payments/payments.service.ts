@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -9,12 +10,17 @@ import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { PaymentStatus, Prisma } from '@prisma/client';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import { MailService } from 'src/common/mail/mail.service';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
   private stripe: Stripe;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       apiVersion: '2025-12-15.clover',
     });
@@ -121,6 +127,14 @@ export class PaymentsService {
       where: {
         id: orderId,
       },
+      include: {
+        user: true,
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+      },
     });
 
     if (order?.cartId) {
@@ -128,6 +142,35 @@ export class PaymentsService {
         where: { id: order.cartId },
         data: { checkedOut: true },
       });
+    }
+
+    if (order?.user?.email) {
+      try {
+        await this.mailService.sendInvoiceEmail({
+          to: order.user.email,
+          customerName:
+            `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim() ||
+            'Customer',
+          orderNumber: order.orderNumber,
+          orderDate: order.createdAt,
+          paymentMethod: updatedPayment.paymentMethod || 'Stripe',
+          transactionId: updatedPayment.transactionId || paymentIntentId,
+          shippingAddress: order.shippingAddress,
+          totalAmount: Number(order.totalAmount),
+          currency: updatedPayment.currency,
+          items: order.orderItems.map((item) => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            unitPrice: Number(item.price),
+            subtotal: Number(item.price) * item.quantity,
+          })),
+        });
+      } catch (error) {
+        this.logger.error(
+          `Payment confirmed for order ${order.orderNumber}, but invoice email failed`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
     }
 
     return {

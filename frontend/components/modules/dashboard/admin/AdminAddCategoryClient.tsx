@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategory } from "@/hooks/useCategory";
-import { AdminSidebar, AdminTopBar } from "./AdminCategoriesClient";
+import { AdminSidebar, AdminTopBar } from "./AdminChrome";
 import type { CreateCategoryRequest } from "@/services/api/category.service";
 
 // ── Form Field ───────────────────────────────────────────────────────────────

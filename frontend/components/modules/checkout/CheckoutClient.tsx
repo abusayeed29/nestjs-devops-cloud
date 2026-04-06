@@ -66,12 +66,14 @@ export function CheckoutClient() {
 
   const handlePaymentSuccess = async (paymentIntentId: string) => {
     try {
-      setCurrentStep(3);
+      setStripeError(null);
       const confirmed = await confirmPayment({ orderId, paymentIntentId });
       if (!confirmed) throw new Error("Failed to confirm payment");
       await clearAllCart();
+      setCurrentStep(3);
     } catch (error) {
       setStripeError(error instanceof Error ? error.message : "Failed to confirm payment");
+      setCurrentStep(1);
     }
   };
 

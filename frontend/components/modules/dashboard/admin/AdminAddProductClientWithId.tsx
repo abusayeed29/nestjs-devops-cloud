@@ -5,9 +5,9 @@ import { useProducts } from "@/hooks/useProducts";
 import { AdminAddProductClient } from "./AdminAddProductClient";
 
 export function AdminAddProductClientWithId({ id }: { id: string }) {
-  const { getProduct, product, isLoading } = useProducts();
+  const { getProductById, product, isLoading } = useProducts();
 
-  useEffect(() => { getProduct(id); }, [id]);
+  useEffect(() => { getProductById(id); }, [id]);
 
   if (isLoading) {
     return (

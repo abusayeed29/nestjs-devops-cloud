@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCategory } from "@/hooks/useCategory";
 import Link from "next/link";
 import type { Category } from "@/types/category.types";
+import { AdminSidebar as SharedAdminSidebar, AdminTopBar as SharedAdminTopBar } from "./AdminChrome";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 function PlusIcon()   { return <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>; }
@@ -158,9 +159,9 @@ export function AdminCategoriesClient() {
 
   return (
     <div style={{ display: "flex", minHeight: "calc(100vh - 64px)", background: "#f8fafc", fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <AdminSidebar activePage="categories" />
+      <SharedAdminSidebar activePage="categories" />
       <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-        <AdminTopBar title="Categories" />
+        <SharedAdminTopBar title="Categories" />
 
         <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "24px" }}>
           {/* Header */}

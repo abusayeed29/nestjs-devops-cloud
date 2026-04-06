@@ -48,6 +48,22 @@ export function useProducts() {
     }
   }, []);
 
+  const getProductById = useCallback(async (id: string): Promise<Product | null> => {
+    if (!id) return null;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await ProductService.getProductById(id);
+      if (response) { setProduct(response); return response; }
+      throw new Error("Product not found");
+    } catch {
+      setError("Failed to load product");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const createProduct = useCallback(async (data: CreateProductRequest): Promise<Product | null> => {
     setLoading(true);
     setError(null);
@@ -92,6 +108,6 @@ export function useProducts() {
 
   return {
     products, product, meta, isLoading, error,
-    getProducts, getProduct, createProduct, updateProduct, deleteProduct,
+    getProducts, getProduct, getProductById, createProduct, updateProduct, deleteProduct,
   };
 }

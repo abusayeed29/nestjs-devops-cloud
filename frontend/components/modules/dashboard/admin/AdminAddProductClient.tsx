@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducts } from "@/hooks/useProducts";
 import { CategoryService } from "@/services/api/category.service";
-import { AdminSidebar, AdminTopBar } from "./AdminProductsClient";
+import { AdminSidebar, AdminTopBar } from "./AdminChrome";
 import type { Category } from "@/types/category.types";
 import type { CreateProductRequest } from "@/types/product.types";
 
@@ -181,7 +181,7 @@ export function AdminAddProductClient({ editProduct }: { editProduct?: any }) {
     <div style={{ display: "flex", minHeight: "calc(100vh - 64px)", background: "#f8fafc", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <AdminSidebar activePage="products" />
       <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-        <AdminTopBar title="Dashboard" />
+        <AdminTopBar title="Products" />
 
         <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "28px 32px", maxWidth: "860px" }}>
           <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#0f172a", marginBottom: "24px" }}>

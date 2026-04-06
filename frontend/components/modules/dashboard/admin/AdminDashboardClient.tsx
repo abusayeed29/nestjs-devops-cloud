@@ -111,15 +111,37 @@ function DonutChart({ data }: { data: { label: string; pct: number; color: strin
   );
 }
 
+function getNiceTickStep(maxValue: number) {
+  const rawStep = Math.max(maxValue, 1) / 5;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const normalized = rawStep / magnitude;
+
+  if (normalized <= 1) return magnitude;
+  if (normalized <= 2) return 2 * magnitude;
+  if (normalized <= 5) return 5 * magnitude;
+  return 10 * magnitude;
+}
+
+function formatTickValue(value: number) {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  if (Number.isInteger(value)) return String(value);
+  return value.toFixed(1);
+}
+
 function LineChart({ labels, data }: { labels: string[]; data: number[] }) {
   const W = 580, H = 200, padL = 48, padB = 30, padT = 12, padR = 12;
   const chartW = W - padL - padR, chartH = H - padB - padT;
   const maxV = Math.max(...data, 1);
+  const tickStep = getNiceTickStep(maxV);
+  const yAxisMax = tickStep * 5;
   const xs = data.map((_, i) => padL + (i / (data.length - 1)) * chartW);
-  const ys = data.map((v) => padT + chartH - (v / maxV) * chartH);
+  const ys = data.map((v) => padT + chartH - (v / yAxisMax) * chartH);
   const path = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x},${ys[i]}`).join(" ");
   const areaPath = path + ` L${xs[xs.length - 1]},${padT + chartH} L${xs[0]},${padT + chartH} Z`;
-  const yTicks = Array.from({ length: 6 }, (_, i) => ({ v: (maxV / 5) * (5 - i), y: padT + (i / 5) * chartH }));
+  const yTicks = Array.from({ length: 6 }, (_, i) => ({
+    v: tickStep * (5 - i),
+    y: padT + (i / 5) * chartH,
+  }));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ overflow: "visible" }}>
       <defs>
@@ -132,7 +154,7 @@ function LineChart({ labels, data }: { labels: string[]; data: number[] }) {
         <g key={i}>
           <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#e2e8f0" strokeWidth="1" />
           <text x={padL - 6} y={y + 4} textAnchor="end" fontSize="10" fill="#94a3b8">
-            {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}
+            {formatTickValue(v)}
           </text>
         </g>
       ))}

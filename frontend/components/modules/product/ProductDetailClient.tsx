@@ -11,11 +11,11 @@ interface ProductDetailClientProps {
 }
 
 export function ProductDetailClient({ productId }: ProductDetailClientProps) {
-  const { product, getProduct, isLoading, error } = useProducts();
+  const { product, getProductById, isLoading, error } = useProducts();
 
   useEffect(() => {
-    if (productId) getProduct(productId);
-  }, [productId, getProduct]);
+    if (productId) getProductById(productId);
+  }, [productId, getProductById]);
 
   if (isLoading) {
     return (
