@@ -58,4 +58,5 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 docs
 
 /generated/prisma
-youtube-nestjsapi-ec2.pem
+devops-key.pem
+devops-nestjsapi-ec2.pem

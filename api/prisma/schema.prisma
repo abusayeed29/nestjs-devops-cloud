@@ -45,6 +45,9 @@ model User {
   role         Role    @default(USER)
   refreshToken String?
 
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
+
   //Relations
   orders   Order[]
   carts    Cart[]
