@@ -4,15 +4,14 @@ import type { User } from "@/types/auth.types";
 /**
  * Auth State Interface
  *
- * Stores authentication state in Redux (in-memory only)
- * - accessToken: JWT access token (not persisted, cleared on page reload)
- * - refreshToken: JWT refresh token (not persisted, cleared on page reload)
+ * Stores authentication state in Redux with localStorage persistence
+ * - accessToken: JWT access token (persisted to localStorage)
+ * - refreshToken: JWT refresh token (persisted to localStorage)
  * - user: Current authenticated user information
  * - isAuthenticated: Boolean flag indicating auth status
  *
- * SECURITY: Tokens are NOT persisted to localStorage or any storage.
- * They exist only in Redux state (RAM), making them immune to XSS attacks
- * that target localStorage. User must login again on page reload.
+ * SECURITY: Tokens are persisted to localStorage for session persistence
+ * across page reloads. Automatic token refresh handles expired tokens.
  */
 export interface AuthState {
   accessToken: string | null;
@@ -22,8 +21,8 @@ export interface AuthState {
 }
 
 /**
- * Initial auth state - all values are null/false
- * User is logged out by default
+ * Initial auth state - loaded from localStorage if available
+ * Falls back to logged out state if no persisted data
  */
 const initialState: AuthState = {
   accessToken: null,
@@ -54,7 +53,7 @@ const authSlice = createSlice({
      * @param state - Current auth state
      * @param action - Payload containing accessToken, refreshToken, and user
      *
-     * Stores all authentication data in memory (Redux state only).
+     * Stores all authentication data in Redux (persisted to localStorage).
      * Sets isAuthenticated to true to indicate user is logged in.
      */
     setAuth: (
@@ -74,7 +73,7 @@ const authSlice = createSlice({
     /**
      * Clear authentication state on logout
      *
-     * Resets all auth data to initial state (null/false).
+     * Resets all auth data to initial state (clears localStorage).
      * User will need to login again to access protected resources.
      */
     clearAuth: (state) => {

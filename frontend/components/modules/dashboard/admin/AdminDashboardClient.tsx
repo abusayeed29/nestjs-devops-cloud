@@ -11,7 +11,9 @@ interface Stats { total: number; pending: number; processing: number; shipped: n
 type Tab = "Sales" | "Orders" | "Revenue";
 
 function fmtCurrency(n: number) { return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-function fmtDate(iso: string) { return new Date(iso).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" }); }
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+}
 
 const statusConfig: Record<string, { bg: string; color: string }> = {
   PENDING:    { bg: "#fff7ed", color: "#c2410c" },
@@ -25,26 +27,77 @@ const statusConfig: Record<string, { bg: string; color: string }> = {
 function StatusBadge({ status }: { status: string }) {
   const s = statusConfig[status] ?? { bg: "#f3f4f6", color: "#374151" };
   return (
-    <span style={{ padding: "3px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: 700, background: s.bg, color: s.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+    <span style={{ padding: "3px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: 700,
+      background: s.bg, color: s.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>
       {status}
     </span>
   );
 }
 
-const donutColors = ["#3b5bdb", "#748ffc", "#a5b4fc", "#c7d2fe", "#e0e7ff", "#818cf8"];
-const donutLabels = ["Televisions", "Mobile & Tablets", "Health & Sports", "Games & Videos", "Laptop & PC", "Home Appliances"];
-const donutData   = [38, 22, 15, 12, 8, 5];
+// ── Chart helpers ────────────────────────────────────────────────────────────
+function buildChartData(orders: AdminOrderDetail[]) {
+  const months: { label: string; key: string }[] = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    months.push({
+      label: d.toLocaleString("en-US", { month: "short" }),
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+    });
+  }
+  const salesMap: Record<string, number>   = {};
+  const ordersMap: Record<string, number>  = {};
+  const revenueMap: Record<string, number> = {};
+  months.forEach(({ key }) => { salesMap[key] = 0; ordersMap[key] = 0; revenueMap[key] = 0; });
+  orders.forEach((o) => {
+    const d = new Date(o.createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (key in salesMap) {
+      ordersMap[key]  += 1;
+      revenueMap[key] += o.total;
+      salesMap[key]   += o.items.reduce((s, i) => s + i.quantity, 0);
+    }
+  });
+  return {
+    labels:  months.map((m) => m.label),
+    Sales:   months.map((m) => salesMap[m.key]),
+    Orders:  months.map((m) => ordersMap[m.key]),
+    Revenue: months.map((m) => revenueMap[m.key]),
+  };
+}
 
-function DonutChart() {
+function buildDonutData(orders: AdminOrderDetail[]) {
+  const countMap: Record<string, number> = {};
+  orders.forEach((o) => o.items.forEach((item) => {
+    const name = item.productName || "Other";
+    countMap[name] = (countMap[name] || 0) + item.quantity;
+  }));
+  const sorted = Object.entries(countMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const total = sorted.reduce((s, [, v]) => s + v, 0) || 1;
+  return sorted.map(([label, count], i) => ({
+    label, pct: Math.round((count / total) * 100), color: donutColors[i] ?? "#e2e8f0",
+  }));
+}
+
+// ── Charts ───────────────────────────────────────────────────────────────────
+const donutColors = ["#3b5bdb", "#748ffc", "#a5b4fc", "#c7d2fe", "#818cf8", "#e0e7ff"];
+
+function DonutChart({ data }: { data: { label: string; pct: number; color: string }[] }) {
   const size = 140, cx = 70, cy = 70, r = 52, strokeW = 22;
   const circumference = 2 * Math.PI * r;
   let offset = 0;
-  const segments = donutData.map((pct, i) => {
+  if (data.length === 0) return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth={strokeW} />
+      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="10" fill="#94a3b8">No data</text>
+    </svg>
+  );
+  const segments = data.map(({ pct, color }, i) => {
     const dash = (pct / 100) * circumference;
-    const gap  = circumference - dash;
     const seg = (
-      <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={donutColors[i]} strokeWidth={strokeW}
-        strokeDasharray={`${dash} ${gap}`} strokeDashoffset={-offset}
+      <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={strokeW}
+        strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset}
         style={{ transform: "rotate(-90deg)", transformOrigin: `${cx}px ${cy}px` }} />
     );
     offset += dash;
@@ -58,26 +111,15 @@ function DonutChart() {
   );
 }
 
-const chartMonths  = ["Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr"];
-const chartDataMap = {
-  Sales:   [14000, 4500, 800, 13500, 2000, 1800, 1900, 900],
-  Orders:  [120,   45,   12,  130,   22,   20,   21,   10],
-  Revenue: [9800,  3200, 600, 9100,  1400, 1300, 1350, 700],
-};
-
-function LineChart({ tab }: { tab: Tab }) {
-  const raw = chartDataMap[tab];
+function LineChart({ labels, data }: { labels: string[]; data: number[] }) {
   const W = 580, H = 200, padL = 48, padB = 30, padT = 12, padR = 12;
   const chartW = W - padL - padR, chartH = H - padB - padT;
-  const maxV = Math.max(...raw);
-  const xs = raw.map((_, i) => padL + (i / (raw.length - 1)) * chartW);
-  const ys = raw.map((v) => padT + chartH - (v / maxV) * chartH);
+  const maxV = Math.max(...data, 1);
+  const xs = data.map((_, i) => padL + (i / (data.length - 1)) * chartW);
+  const ys = data.map((v) => padT + chartH - (v / maxV) * chartH);
   const path = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x},${ys[i]}`).join(" ");
   const areaPath = path + ` L${xs[xs.length - 1]},${padT + chartH} L${xs[0]},${padT + chartH} Z`;
-  const yTicks = Array.from({ length: 6 }, (_, i) => ({
-    v: (maxV / 5) * (5 - i),
-    y: padT + (i / 5) * chartH,
-  }));
+  const yTicks = Array.from({ length: 6 }, (_, i) => ({ v: (maxV / 5) * (5 - i), y: padT + (i / 5) * chartH }));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ overflow: "visible" }}>
       <defs>
@@ -90,22 +132,21 @@ function LineChart({ tab }: { tab: Tab }) {
         <g key={i}>
           <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#e2e8f0" strokeWidth="1" />
           <text x={padL - 6} y={y + 4} textAnchor="end" fontSize="10" fill="#94a3b8">
-            {v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toFixed(0)}
+            {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}
           </text>
         </g>
       ))}
-      {chartMonths.map((m, i) => (
+      {labels.map((m, i) => (
         <text key={m} x={xs[i]} y={H - 4} textAnchor="middle" fontSize="10" fill="#94a3b8">{m}</text>
       ))}
       <path d={areaPath} fill="url(#ag)" />
       <path d={path} fill="none" stroke="#3b5bdb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      {xs.map((x, i) => (
-        <circle key={i} cx={x} cy={ys[i]} r="4" fill="#fff" stroke="#3b5bdb" strokeWidth="2" />
-      ))}
+      {xs.map((x, i) => <circle key={i} cx={x} cy={ys[i]} r="4" fill="#fff" stroke="#3b5bdb" strokeWidth="2" />)}
     </svg>
   );
 }
 
+// ── Icons ────────────────────────────────────────────────────────────────────
 function GridIcon()   { return <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>; }
 function OrderIcon()  { return <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>; }
 function UsersIcon()  { return <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>; }
@@ -120,31 +161,156 @@ function ChevronDown(){ return <svg width="13" height="13" fill="none" stroke="c
 function HomeIcon()   { return <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>; }
 function UserIcon()   { return <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>; }
 
+// ── Nav config ───────────────────────────────────────────────────────────────
 const navItems = [
-  { label: "Dashboard",     href: "/admin",        icon: <GridIcon />,   hasChevron: false },
-  { label: "Orders",        href: "/admin/orders", icon: <OrderIcon />,  hasChevron: false },
-  { label: "Customers",     href: "#",             icon: <UsersIcon />,  hasChevron: false },
-  { label: "Products",      href: "#",             icon: <BoxIcon />,    hasChevron: true  },
-  { label: "Categories",    href: "#",             icon: <TagIcon />,    hasChevron: true  },
-  { label: "Coupons",       href: "#",             icon: <CouponIcon />, hasChevron: false },
-  { label: "Reviews",       href: "#",             icon: <StarIcon />,   hasChevron: false },
-  { label: "Settings",      href: "#",             icon: <GearIcon />,   hasChevron: true  },
-  { label: "Customization", href: "#",             icon: <BrushIcon />,  hasChevron: true  },
-  { label: "Blog",          href: "#",             icon: <BlogIcon />,   hasChevron: true  },
+  { label: "Dashboard",     href: "/admin",           icon: <GridIcon />,   chevron: false, children: [] },
+  { label: "Orders",        href: "/admin/orders",    icon: <OrderIcon />,  chevron: false, children: [] },
+  { label: "Customers",     href: "#",                icon: <UsersIcon />,  chevron: false, children: [] },
+  {
+    label: "Products", href: "/admin/products", icon: <BoxIcon />, chevron: true,
+    children: [
+      { label: "All Products", href: "/admin/products" },
+      { label: "Add Product",  href: "/admin/products/add" },
+    ],
+  },
+  {
+    label: "Categories", href: "/admin/categories", icon: <TagIcon />, chevron: true,
+    children: [
+      { label: "All Categories", href: "/admin/categories" },
+      { label: "Add Category",   href: "/admin/categories/add" },
+    ],
+  },
+  { label: "Coupons",       href: "#",                icon: <CouponIcon />, chevron: false, children: [] },
+  { label: "Reviews",       href: "#",                icon: <StarIcon />,   chevron: false, children: [] },
+  { label: "Settings",      href: "#",                icon: <GearIcon />,   chevron: true,  children: [] },
+  { label: "Customization", href: "#",                icon: <BrushIcon />,  chevron: true,  children: [] },
+  { label: "Blog",          href: "#",                icon: <BlogIcon />,   chevron: true,  children: [] },
 ];
 
+// ── Shared Sidebar ───────────────────────────────────────────────────────────
+function Sidebar({ activePage }: { activePage: string }) {
+  const [openMenu, setOpenMenu] = useState<string | null>(
+    activePage === "dashboard" ? null : activePage
+  );
+
+  function toggle(label: string) {
+    setOpenMenu((prev) => (prev === label ? null : label));
+  }
+
+  return (
+    <aside style={{
+      width: "210px", minWidth: "210px", background: "#fff",
+      borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", padding: "20px 0",
+    }}>
+      <p style={{ fontSize: "10px", fontWeight: 700, color: "#94a3b8", letterSpacing: "0.1em", padding: "0 20px 12px", textTransform: "uppercase" }}>
+        MENU
+      </p>
+      <nav style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+        {navItems.map((item) => {
+          const active    = item.label.toLowerCase() === activePage.toLowerCase();
+          const hasKids   = item.children.length > 0;
+          const isOpen    = openMenu === item.label;
+
+          return (
+            <div key={item.label}>
+              <Link
+                href={hasKids ? "#" : item.href}
+                onClick={hasKids ? (e) => { e.preventDefault(); toggle(item.label); } : undefined}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "9px 20px", fontSize: "13px",
+                  fontWeight: active ? 600 : 500,
+                  color: active ? "#3b5bdb" : "#475569",
+                  background: active ? "#eff6ff" : "transparent",
+                  borderRight: active ? "3px solid #3b5bdb" : "3px solid transparent",
+                  textDecoration: "none", transition: "background 0.12s, color 0.12s",
+                }}
+                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "#f8fafc"; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ color: active ? "#3b5bdb" : "#94a3b8", display: "flex" }}>
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </span>
+                {item.chevron && (
+                  <span style={{
+                    color: "#cbd5e1", display: "flex",
+                    transform: isOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s",
+                  }}>
+                    <ChevronDown />
+                  </span>
+                )}
+              </Link>
+
+              {/* Sub-items */}
+              {hasKids && isOpen && (
+                <div style={{ background: "#f8fafc", borderRight: "3px solid transparent" }}>
+                  {item.children.map((child) => (
+                    <Link key={child.label} href={child.href} style={{
+                      display: "block", padding: "7px 20px 7px 46px",
+                      fontSize: "12px", fontWeight: 500, color: "#64748b",
+                      textDecoration: "none", transition: "color 0.12s",
+                    }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "#3b5bdb"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = "#64748b"; }}
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+// ── Shared Top Bar ───────────────────────────────────────────────────────────
+function TopBar({ title }: { title: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+      <h1 style={{ fontSize: "20px", fontWeight: 700, color: "#0f172a" }}>{title}</h1>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <Link href="/" style={{
+          display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px",
+          background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px",
+          fontSize: "13px", fontWeight: 500, color: "#374151", textDecoration: "none",
+        }}>
+          <HomeIcon /> Back to home
+        </Link>
+        <button style={{
+          display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px",
+          background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px",
+          fontSize: "13px", fontWeight: 500, color: "#374151", cursor: "pointer",
+        }}>
+          <UserIcon /> Account <ChevronDown />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Dashboard ───────────────────────────────────────────────────────────
 export function AdminDashboardClient() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { getAllOrders, isLoading } = useOrder();
-  const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, processing: 0, shipped: 0, delivered: 0 });
+
+  const [stats, setStats]               = useState<Stats>({ total: 0, pending: 0, processing: 0, shipped: 0, delivered: 0 });
   const [recentOrders, setRecentOrders] = useState<AdminOrderDetail[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("Sales");
+  const [activeTab, setActiveTab]       = useState<Tab>("Sales");
+  const [chartData, setChartData]       = useState<ReturnType<typeof buildChartData> | null>(null);
+  const [donutData, setDonutData]       = useState<ReturnType<typeof buildDonutData>>([]);
 
   useEffect(() => {
     if (!isAuthenticated) { router.push("/auth/login"); return; }
     if (user?.role !== "ADMIN") { router.push("/user"); return; }
-    getAllOrders(1, 100).then((res) => {
+    getAllOrders(1, 1000).then((res) => {
       if (!res) return;
       setStats({
         total:      res.total,
@@ -158,6 +324,8 @@ export function AdminDashboardClient() {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 5)
       );
+      setChartData(buildChartData(res.data));
+      setDonutData(buildDonutData(res.data));
     });
   }, [isAuthenticated, user]);
 
@@ -172,51 +340,10 @@ export function AdminDashboardClient() {
 
   return (
     <div style={{ display: "flex", minHeight: "calc(100vh - 64px)", background: "#f8fafc", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <Sidebar activePage="dashboard" />
 
-      {/* ── Sidebar ── */}
-      <aside style={{ width: "210px", minWidth: "210px", background: "#fff", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", padding: "20px 0" }}>
-        <p style={{ fontSize: "10px", fontWeight: 700, color: "#94a3b8", letterSpacing: "0.1em", padding: "0 20px 12px", textTransform: "uppercase" }}>MENU</p>
-        <nav style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-          {navItems.map((item) => {
-            const active = item.label === "Dashboard";
-            return (
-              <Link key={item.label} href={item.href} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "9px 20px", fontSize: "13px", fontWeight: active ? 600 : 500,
-                color: active ? "#3b5bdb" : "#475569",
-                background: active ? "#eff6ff" : "transparent",
-                borderRight: active ? "3px solid #3b5bdb" : "3px solid transparent",
-                textDecoration: "none", transition: "all 0.12s",
-              }}
-                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "#f8fafc"; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ color: active ? "#3b5bdb" : "#94a3b8", display: "flex" }}>{item.icon}</span>
-                  {item.label}
-                </span>
-                {item.hasChevron && <span style={{ color: "#cbd5e1", display: "flex" }}><ChevronDown /></span>}
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* ── Main ── */}
       <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-
-        {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "20px", fontWeight: 700, color: "#0f172a" }}>Dashboard</h1>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#374151", textDecoration: "none" }}>
-              <HomeIcon /> Back to home
-            </Link>
-            <button style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#374151", cursor: "pointer" }}>
-              <UserIcon /> Account <ChevronDown />
-            </button>
-          </div>
-        </div>
+        <TopBar title="Dashboard" />
 
         {/* Stat cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
@@ -238,10 +365,8 @@ export function AdminDashboardClient() {
           }
         </div>
 
-        {/* Charts row */}
+        {/* Charts */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "16px", marginBottom: "24px" }}>
-
-          {/* Line chart */}
           <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "22px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
               <h2 style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>Monthly Analytics</h2>
@@ -251,26 +376,33 @@ export function AdminDashboardClient() {
                     padding: "4px 12px", fontSize: "12px", fontWeight: 600, borderRadius: "6px",
                     border: "none", cursor: "pointer",
                     background: activeTab === t ? "#3b5bdb" : "transparent",
-                    color: activeTab === t ? "#fff" : "#64748b",
-                    transition: "all 0.15s",
+                    color: activeTab === t ? "#fff" : "#64748b", transition: "all 0.15s",
                   }}>{t}</button>
                 ))}
               </div>
             </div>
-            <LineChart tab={activeTab} />
+            {isLoading || !chartData
+              ? <div style={{ height: "200px", background: "#f8fafc", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: "13px" }}>Loading chart…</div>
+              : <LineChart labels={chartData.labels} data={chartData[activeTab]} />
+            }
           </div>
 
-          {/* Donut chart */}
           <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "22px 24px" }}>
             <h2 style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a", marginBottom: "18px" }}>Best Selling Products</h2>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}><DonutChart /></div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 8px" }}>
-              {donutLabels.map((label, i) => (
-                <div key={label} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#475569" }}>
-                  <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: donutColors[i], flexShrink: 0 }} />
-                  {label}
-                </div>
-              ))}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+              <DonutChart data={donutData} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {donutData.length === 0
+                ? <p style={{ fontSize: "12px", color: "#94a3b8", textAlign: "center" }}>No product data yet</p>
+                : donutData.map(({ label, pct, color }) => (
+                    <div key={label} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#475569" }}>
+                      <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: color, flexShrink: 0 }} />
+                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+                      <span style={{ fontWeight: 600, color: "#1e293b" }}>{pct}%</span>
+                    </div>
+                  ))
+              }
             </div>
           </div>
         </div>

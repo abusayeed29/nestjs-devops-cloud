@@ -21,9 +21,9 @@ import type { LoginCredentials, RegisterCredentials } from "@/types/auth.types";
  * - Automatic logout with state cleanup
  * - Loading and error state management
  *
- * SECURITY: Tokens are stored in Redux (RAM) only, not in localStorage.
- * This protects against XSS attacks targeting persistent storage.
- * User must login again on page reload.
+ * SECURITY: Tokens are stored in Redux with localStorage persistence.
+ * This allows session persistence across page reloads while maintaining
+ * automatic token refresh for expired tokens.
  */
 export function useAuth() {
   const router = useRouter();
