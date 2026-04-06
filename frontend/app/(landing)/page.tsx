@@ -1,26 +1,24 @@
 import { Header } from "@/components/modules/landing/Header";
-import { ProductList } from "@/components/modules/landing/ProductList";
+import { Hero } from "@/components/modules/landing/Hero";
+import { LandingContent } from "@/components/modules/landing/LandingContent";
 import { Footer } from "@/components/modules/landing/Footer";
 
 export default function Home() {
   return (
     <>
       <Header />
-      <main style={{ minHeight: "60vh" }}>
-        <ProductList />
+      <main>
+        <Hero />
+        <LandingContent />
       </main>
       <Footer />
     </>
   );
 }
 
-// Nextjs dynamic metadata
 export function generateMetadata() {
   return {
-    title: `Home - StoreFront`,
-    description: `StoreFront - Store`,
-    icons: {
-      icon: `path to asset file`,
-    },
+    title: "StoreFront - Your Premium Shopping Destination",
+    description: "Discover quality products at great prices",
   };
 }

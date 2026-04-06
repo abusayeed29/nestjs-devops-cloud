@@ -3,41 +3,66 @@
 @theme {
   --color-primary: #3c50e0;
   --color-primary-dark: #2f40c8;
-  --color-primary-light: rgba(60, 80, 224, 0.08);
-  --color-page-bg: #eff4fb;
-  --color-footer-bg: #f7f8fc;
-  --color-announcement: #3c50e0;
-  --color-brand: #1a1a2e;
+  --color-brand: #1c2434;
   --color-muted: #8a94a6;
   --color-border: #e5e7eb;
-  --color-input-bg: #f9fafb;
   --color-error: #d32f2f;
-  --color-error-bg: #fff1f0;
-  --color-error-border: #ffd6d6;
   --color-success: #166534;
-  --color-success-bg: #f0fdf4;
-  --color-success-border: #bbf7d0;
 
-  --font-sans: "Geist", Arial, sans-serif;
-  --font-mono: "Geist Mono", monospace;
+  --font-sans: var(--font-dm-sans), "DM Sans", Arial, sans-serif;
 }
 
-html, body {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
   max-width: 100vw;
   overflow-x: hidden;
-}
-
-body {
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
 a {
   text-decoration: none;
+  color: inherit;
 }
+
+/* Responsive product grid */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .hero-title {
+    font-size: 28px !important;
+  }
+
+  .feature-strip {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+

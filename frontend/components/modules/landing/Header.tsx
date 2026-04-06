@@ -13,115 +13,143 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleDashboardClick = () => {
-    if (user?.role === "ADMIN") router.push("/admin");
-    else router.push("/user");
+    router.push(user?.role === "ADMIN" ? "/admin" : "/user");
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full">
-      {/* Announcement Bar */}
-      <div className="bg-[#3c50e0] text-white text-center py-2 text-sm">
-        <p className="m-0">🚚 Get free delivery on orders over <strong className="font-bold">$80</strong></p>
+    <header style={{ position: "sticky", top: 0, zIndex: 50, width: "100%" }}>
+      {/* Announcement bar */}
+      <div style={{ background: "#1c2434", color: "#fff", textAlign: "center", padding: "8px 16px", fontSize: "13px", fontWeight: 500 }}>
+        Get free delivery on orders over <strong>$80</strong>
+        <span style={{ marginLeft: "auto", position: "absolute", right: "24px", top: "8px", display: "flex", gap: "16px", fontSize: "13px" }}>
+          <Link href="/auth/register" style={{ color: "#fff", opacity: 0.8 }}>Create an account</Link>
+          <Link href="/auth/login" style={{ color: "#fff", fontWeight: 600 }}>Sign In</Link>
+        </span>
       </div>
 
-      {/* Main Header */}
-      <div className="bg-white border-b border-[#e8ecf0] shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-[68px] flex items-center justify-between gap-8">
+      {/* Main nav */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px", height: "68px", display: "flex", alignItems: "center", gap: "32px" }}>
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 no-underline flex-shrink-0">
-            <div className="w-9 h-9 bg-[#3c50e0] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+            <div style={{ width: "36px", height: "36px", background: "#3c50e0", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 0 1-8 0"/>
               </svg>
             </div>
-            <span className="text-[22px] font-extrabold text-[#1a1a2e] tracking-tight">StoreFront</span>
+            <span style={{ fontSize: "20px", fontWeight: 800, color: "#1c2434", letterSpacing: "-0.5px" }}>StoreFront</span>
           </Link>
 
-          {/* Nav */}
-          <nav
-            className={
-              menuOpen
-                ? "flex flex-col absolute top-full left-0 right-0 bg-white border-b border-[#e8ecf0] shadow-lg z-[99] px-4 py-3 gap-1 md:static md:flex md:flex-row md:border-none md:shadow-none md:py-0 md:px-0 md:z-auto md:gap-1 md:items-center"
-                : "hidden md:flex md:flex-row md:items-center md:gap-1"
-            }
-          >
-            <Link href="/" className="text-[15px] font-medium text-[#374151] px-3 py-2 rounded-lg hover:text-[#3c50e0] hover:bg-[#3c50e0]/5 transition-all" onClick={() => setMenuOpen(false)}>Home</Link>
-            <Link href="/" className="text-[15px] font-medium text-[#374151] px-3 py-2 rounded-lg hover:text-[#3c50e0] hover:bg-[#3c50e0]/5 transition-all" onClick={() => setMenuOpen(false)}>Shop</Link>
-            <Link href="/" className="text-[15px] font-medium text-[#374151] px-3 py-2 rounded-lg hover:text-[#3c50e0] hover:bg-[#3c50e0]/5 transition-all" onClick={() => setMenuOpen(false)}>Popular</Link>
-            <Link href="/" className="text-[15px] font-medium text-[#374151] px-3 py-2 rounded-lg hover:text-[#3c50e0] hover:bg-[#3c50e0]/5 transition-all" onClick={() => setMenuOpen(false)}>Contact</Link>
+          {/* Nav links — desktop */}
+          <nav style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1 }}>
+            {["Popular", "Shop", "Blog", "Contact"].map((item) => (
+              <Link
+                key={item}
+                href="/"
+                style={{ padding: "8px 14px", fontSize: "15px", fontWeight: 500, color: "#374151", borderRadius: "8px", transition: "all 0.15s" }}
+                onMouseEnter={(e) => { (e.target as HTMLElement).style.color = "#3c50e0"; (e.target as HTMLElement).style.background = "#f0f3ff"; }}
+                onMouseLeave={(e) => { (e.target as HTMLElement).style.color = "#374151"; (e.target as HTMLElement).style.background = "transparent"; }}
+              >
+                {item}
+              </Link>
+            ))}
           </nav>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Right actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
             {/* Search */}
-            <button className="relative w-10 h-10 flex items-center justify-center rounded-lg text-[#374151] hover:bg-gray-100 hover:text-[#3c50e0] transition-all bg-transparent border-none cursor-pointer" aria-label="Search">
-              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button style={{ width: "38px", height: "38px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", color: "#4b5563" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
             </button>
 
             {/* Wishlist */}
-            <button className="relative w-10 h-10 flex items-center justify-center rounded-lg text-[#374151] hover:bg-gray-100 hover:text-[#3c50e0] transition-all bg-transparent border-none cursor-pointer" aria-label="Wishlist">
-              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button style={{ width: "38px", height: "38px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", color: "#4b5563" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
               </svg>
             </button>
 
             {/* Cart */}
-            <Link href="/cart" className="relative w-10 h-10 flex items-center justify-center rounded-lg text-[#374151] hover:bg-gray-100 hover:text-[#3c50e0] transition-all" aria-label="Cart">
-              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Link href="/cart" style={{ position: "relative", width: "38px", height: "38px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", color: "#4b5563" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
               </svg>
               {totalItems > 0 && (
-                <span className="absolute top-1 right-1 bg-[#3c50e0] text-white text-[10px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1">
+                <span style={{ position: "absolute", top: "2px", right: "2px", background: "#3c50e0", color: "#fff", fontSize: "10px", fontWeight: 700, minWidth: "16px", height: "16px", borderRadius: "99px", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
                   {totalItems}
                 </span>
               )}
             </Link>
 
-            {/* User */}
+            {/* User section */}
             {isAuthenticated ? (
-              <div className="flex items-center gap-1">
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 <button
-                  className="relative w-10 h-10 flex items-center justify-center rounded-lg text-[#374151] hover:bg-gray-100 hover:text-[#3c50e0] transition-all bg-transparent border-none cursor-pointer"
                   onClick={handleDashboardClick}
-                  aria-label="Dashboard"
+                  style={{ width: "38px", height: "38px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", color: "#4b5563" }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
                 </button>
                 <button
-                  className="px-4 py-2 border-[1.5px] border-[#e5e7eb] text-[#6b7280] rounded-lg text-sm font-medium hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all bg-transparent cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={logout}
                   disabled={isLoading}
+                  style={{ padding: "6px 14px", fontSize: "13px", fontWeight: 500, color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: "8px", background: "transparent", cursor: "pointer" }}
                 >
-                  {isLoading ? "..." : "Sign Out"}
+                  Sign Out
                 </button>
               </div>
             ) : (
-              <Link href="/auth/login" className="px-5 py-2 bg-[#3c50e0] text-white rounded-lg text-sm font-semibold hover:bg-[#2f40c8] hover:shadow-md transition-all whitespace-nowrap">
+              <Link
+                href="/auth/login"
+                style={{ marginLeft: "4px", padding: "8px 18px", background: "#3c50e0", color: "#fff", borderRadius: "8px", fontSize: "14px", fontWeight: 600 }}
+              >
                 Sign In
               </Link>
             )}
 
             {/* Mobile hamburger */}
             <button
-              className="md:hidden flex flex-col gap-[5px] bg-transparent border-none cursor-pointer p-1.5 rounded-md hover:bg-gray-100"
               onClick={() => setMenuOpen(!menuOpen)}
-              aria-label="Menu"
+              style={{ display: "none", width: "38px", height: "38px", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", flexDirection: "column", gap: "5px" }}
+              className="mobile-menu-btn"
             >
-              <span className="block w-[22px] h-0.5 bg-[#374151] rounded-sm transition-all" />
-              <span className="block w-[22px] h-0.5 bg-[#374151] rounded-sm transition-all" />
-              <span className="block w-[22px] h-0.5 bg-[#374151] rounded-sm transition-all" />
+              <span style={{ display: "block", width: "20px", height: "2px", background: "#374151", borderRadius: "2px" }} />
+              <span style={{ display: "block", width: "20px", height: "2px", background: "#374151", borderRadius: "2px" }} />
+              <span style={{ display: "block", width: "20px", height: "2px", background: "#374151", borderRadius: "2px" }} />
             </button>
           </div>
         </div>
+
+        {/* Mobile nav */}
+        {menuOpen && (
+          <div style={{ borderTop: "1px solid #f3f4f6", padding: "8px 24px 12px" }}>
+            {["Popular", "Shop", "Blog", "Contact"].map((item) => (
+              <Link
+                key={item}
+                href="/"
+                onClick={() => setMenuOpen(false)}
+                style={{ display: "block", padding: "10px 12px", fontSize: "14px", fontWeight: 500, color: "#374151", borderRadius: "8px" }}
+              >
+                {item}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </header>
   );

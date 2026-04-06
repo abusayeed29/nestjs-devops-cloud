@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
-import styles from "./cart-item.module.scss";
 
 interface CartItemProps {
   item: CartItemType;
@@ -12,19 +11,10 @@ interface CartItemProps {
 
 export function CartItem({ item }: CartItemProps) {
   const { product, quantity } = item;
-  const {
-    incrementProductQuantity,
-    decrementProductQuantity,
-    removeProductFromCart,
-  } = useCart();
+  const { incrementProductQuantity, decrementProductQuantity, removeProductFromCart } = useCart();
 
   const handleIncrement = async () => {
-    // Check stock limit before incrementing
-    if (quantity < product.stock) {
-      await incrementProductQuantity(product.id);
-    } else {
-      alert(`Only ${product.stock} items available in stock`);
-    }
+    if (quantity < product.stock) await incrementProductQuantity(product.id);
   };
 
   const handleDecrement = async () => {
@@ -32,87 +22,61 @@ export function CartItem({ item }: CartItemProps) {
   };
 
   const handleRemove = async () => {
-    if (window.confirm(`Remove ${product.name} from cart?`)) {
-      await removeProductFromCart(product.id);
-    }
+    await removeProductFromCart(product.id);
   };
 
-  const itemTotal = product.price * quantity;
-
   return (
-    <div className={styles.cartItem}>
-      <Link href={`/${product.id}`} className={styles.imageWrapper}>
-        <Image
-          src={
-            product.imageUrl.trimEnd() ||
-            "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&q=80" ||
-            "/placeholder.svg"
-          }
-          alt={product.name}
-          width={120}
-          height={120}
-        />
+    <div style={{ display: "flex", gap: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", padding: "16px", alignItems: "center" }}>
+      {/* Image */}
+      <Link href={`/${product.id}`} style={{ flexShrink: 0 }}>
+        <div style={{ width: "88px", height: "88px", borderRadius: "10px", overflow: "hidden", background: "#f9fafb", border: "1px solid #e5e7eb" }}>
+          <Image
+            src={product.imageUrl?.trim() || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80"}
+            alt={product.name}
+            width={88}
+            height={88}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
       </Link>
 
-      <div className={styles.details}>
-        <div className={styles.info}>
-          <Link href={`/${product.id}`} className={styles.name}>
-            {product.name}
-          </Link>
-          <span className={styles.category}>{product.categoryId}</span>
-          <span className={styles.price}>${product.price.toFixed(2)}</span>
-          {product.stock <= 5 && (
-            <span className={styles.lowStock}>
-              Only {product.stock} left in stock
-            </span>
-          )}
-        </div>
+      {/* Details */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Link href={`/${product.id}`} style={{ fontSize: "14px", fontWeight: 600, color: "#111827", display: "block", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {product.name}
+        </Link>
+        <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "10px" }}>Unit: ${product.price.toFixed(2)}</p>
 
-        <div className={styles.actions}>
-          <div className={styles.quantityControl}>
-            <button
-              onClick={handleDecrement}
-              disabled={quantity <= 1}
-              aria-label="Decrease quantity"
-              className={styles.quantityButton}
-            >
-              −
-            </button>
-            <span className={styles.quantity}>{quantity}</span>
-            <button
-              onClick={handleIncrement}
-              disabled={quantity >= product.stock}
-              aria-label="Increase quantity"
-              className={styles.quantityButton}
-            >
-              +
-            </button>
-          </div>
-
-          <div className={styles.itemTotal}>${itemTotal.toFixed(2)}</div>
-
+        {/* Qty controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
-            onClick={handleRemove}
-            className={styles.removeButton}
-            aria-label="Remove item"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
-          </button>
+            onClick={handleDecrement}
+            disabled={quantity <= 1}
+            style={{ width: "30px", height: "30px", border: "1px solid #e5e7eb", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: quantity <= 1 ? "not-allowed" : "pointer", opacity: quantity <= 1 ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+          >−</button>
+          <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827", minWidth: "24px", textAlign: "center" }}>{quantity}</span>
+          <button
+            onClick={handleIncrement}
+            disabled={quantity >= product.stock}
+            style={{ width: "30px", height: "30px", border: "1px solid #e5e7eb", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: quantity >= product.stock ? "not-allowed" : "pointer", opacity: quantity >= product.stock ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+          >+</button>
         </div>
+      </div>
+
+      {/* Price + Remove */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px", flexShrink: 0 }}>
+        <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
+          ${(product.price * quantity).toFixed(2)}
+        </span>
+        <button
+          onClick={handleRemove}
+          style={{ width: "32px", height: "32px", border: "1px solid #fecaca", borderRadius: "8px", background: "#fef2f2", color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          aria-label="Remove item"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          </svg>
+        </button>
       </div>
     </div>
   );
