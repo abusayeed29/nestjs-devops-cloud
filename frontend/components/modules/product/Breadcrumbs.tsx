@@ -1,26 +1,25 @@
-"use client"
+"use client";
 
-import Link from "next/link"
+import Link from "next/link";
 
 interface BreadcrumbsProps {
-  productName: string
+  productName: string;
 }
 
 export function Breadcrumbs({ productName }: BreadcrumbsProps) {
   return (
-    <div className="py-6 border-b border-[#e5e7eb]">
-      <div className="max-w-[1200px] mx-auto px-4">
-        <nav className="flex items-center gap-2 flex-wrap text-sm text-gray-500">
-          <Link
-            href="/"
-            className="text-gray-500 no-underline transition-colors hover:text-[#1a1a2e]"
-          >
-            Store
-          </Link>
-          <span className="text-gray-300">/</span>
-          <span className="text-[#1a1a2e] font-medium">{productName}</span>
+    <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "14px 24px" }}>
+        <nav style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6b7280" }}>
+          <Link href="/" style={{ color: "#6b7280" }}>Home</Link>
+          <span style={{ color: "#d1d5db" }}>›</span>
+          <Link href="/" style={{ color: "#6b7280" }}>Shop</Link>
+          <span style={{ color: "#d1d5db" }}>›</span>
+          <span style={{ color: "#111827", fontWeight: 500, maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {productName}
+          </span>
         </nav>
       </div>
     </div>
-  )
+  );
 }

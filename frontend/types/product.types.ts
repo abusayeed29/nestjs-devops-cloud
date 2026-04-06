@@ -2,16 +2,37 @@
 export interface Product {
   id: string;
   name: string;
+  slug?: string;
   description: string;
+  shortDescription?: string;
   price: number;
+  discountedPrice?: number;
   stock: number;
+  quantity: number;
   sku: string;
   imageUrl: string;
   categoryId: string;
   isActive: boolean;
+  tags?: string[];
+  offers?: string[];
   createdAt: string;
   updatedAt: string;
-  quantity: number;
+}
+
+export interface CreateProductRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  shortDescription?: string;
+  price: number;
+  discountedPrice?: number;
+  stock: number;
+  sku?: string;
+  imageUrl?: string;
+  categoryId: string;
+  tags?: string[];
+  offers?: string[];
+  isActive?: boolean;
 }
 
 export interface ProductCart {

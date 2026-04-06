@@ -11,124 +11,160 @@ interface ProductDetailProps {
 
 export function ProductDetail({ product }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
   const { addProductToCart } = useCart();
   const isInStock = product.stock > 0;
 
-  const handleIncrement = () => {
-    if (quantity < product.stock) {
-      setQuantity(quantity + 1);
-    }
-  };
-
-  const handleDecrement = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
-  };
-
   const handleAddToCart = () => {
-    if (isInStock) {
-      addProductToCart({
-        ...product,
-        quantity: quantity,
-      });
-      // Optional: Reset quantity after adding
-      setQuantity(1);
-      // Optional: Show success message
-      alert(`Added ${quantity} ${product.name} to cart!`);
-    }
+    if (!isInStock) return;
+    addProductToCart({ ...product, quantity });
+    setQuantity(1);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2500);
   };
+
+  const qtyBtn = (action: "dec" | "inc") => ({
+    width: "36px",
+    height: "36px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    background: "#fff",
+    fontSize: "18px",
+    fontWeight: 600,
+    color: "#374151",
+    cursor: (action === "dec" ? quantity <= 1 : quantity >= product.stock) ? "not-allowed" : "pointer",
+    opacity: (action === "dec" ? quantity <= 1 : quantity >= product.stock) ? 0.4 : 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "inherit",
+  } as React.CSSProperties);
 
   return (
-    <section className="py-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* Image */}
-          <div className="relative w-full aspect-square bg-gray-50 rounded-xl overflow-hidden">
+    <section style={{ background: "#f9fafb" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" }}>
+
+          {/* Left — Image */}
+          <div style={{ background: "#fff", borderRadius: "16px", border: "1px solid #e5e7eb", overflow: "hidden", aspectRatio: "1" }}>
             <Image
-              src={
-                product.imageUrl.trimEnd() ||
-                "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&q=80" ||
-                "/placeholder.svg"
-              }
+              src={product.imageUrl?.trim() || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80"}
               alt={product.name}
               width={600}
               height={600}
               priority
-              className="w-full h-full object-cover"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           </div>
 
-          {/* Info */}
-          <div className="flex flex-col gap-6">
-            <span className="inline-block text-sm text-gray-500 uppercase tracking-wide">
-              {product.categoryId}
+          {/* Right — Info */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* Category */}
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "#3c50e0", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Product
             </span>
 
-            <h1 className="text-2xl font-bold text-[#1a1a2e] m-0">
+            {/* Name */}
+            <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", lineHeight: 1.3, margin: 0 }}>
               {product.name}
             </h1>
 
-            <p className="text-3xl font-semibold text-[#1a1a2e]">
+            {/* Stars */}
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= 4 ? "#f59e0b" : "#e5e7eb"} stroke="none">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              ))}
+              <span style={{ fontSize: "13px", color: "#6b7280", marginLeft: "6px" }}>(4.0) · 128 reviews</span>
+            </div>
+
+            {/* Price */}
+            <div style={{ fontSize: "32px", fontWeight: 800, color: "#111827" }}>
               ${product.price.toFixed(2)}
-            </p>
+            </div>
 
-            <span
-              className={`inline-flex items-center gap-2 text-sm font-medium before:content-[''] before:block before:w-2 before:h-2 before:rounded-full before:bg-current ${
-                isInStock ? "text-emerald-600" : "text-red-600"
-              }`}
-            >
-              {isInStock
-                ? `${product.stock} available in stock`
-                : "Out of stock"}
-            </span>
+            {/* Stock */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 500, color: isInStock ? "#16a34a" : "#dc2626" }}>
+              <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isInStock ? "#16a34a" : "#dc2626" }} />
+              {isInStock ? `${product.stock} items in stock` : "Out of stock"}
+            </div>
 
-            <hr className="h-px bg-[#e5e7eb] border-none" />
+            <hr style={{ border: "none", borderTop: "1px solid #e5e7eb" }} />
 
-            <p className="text-base leading-relaxed text-gray-500">
+            {/* Description */}
+            <p style={{ fontSize: "14px", color: "#6b7280", lineHeight: 1.7, margin: 0 }}>
               {product.description}
             </p>
 
-            <hr className="h-px bg-[#e5e7eb] border-none" />
+            <hr style={{ border: "none", borderTop: "1px solid #e5e7eb" }} />
 
+            {/* Quantity */}
             {isInStock && (
-              <div className="flex flex-col gap-4">
-                <label className="text-sm font-medium text-[#1a1a2e]">
-                  Quantity
-                </label>
-                <div className="flex items-center gap-4 w-fit">
-                  <button
-                    onClick={handleDecrement}
-                    disabled={quantity <= 1}
-                    aria-label="Decrease quantity"
-                    className="w-10 h-10 border border-[#d1d5db] bg-white rounded-md text-xl font-semibold text-[#1a1a2e] cursor-pointer transition-all hover:bg-gray-50 hover:border-[#1a1a2e] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    −
-                  </button>
-                  <span className="min-w-[3rem] text-center text-lg font-semibold text-[#1a1a2e]">
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>Quantity</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <button onClick={() => quantity > 1 && setQuantity(q => q - 1)} style={qtyBtn("dec")}>−</button>
+                  <span style={{ minWidth: "32px", textAlign: "center", fontSize: "16px", fontWeight: 600, color: "#111827" }}>
                     {quantity}
                   </span>
-                  <button
-                    onClick={handleIncrement}
-                    disabled={quantity >= product.stock}
-                    aria-label="Increase quantity"
-                    className="w-10 h-10 border border-[#d1d5db] bg-white rounded-md text-xl font-semibold text-[#1a1a2e] cursor-pointer transition-all hover:bg-gray-50 hover:border-[#1a1a2e] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    +
-                  </button>
+                  <button onClick={() => quantity < product.stock && setQuantity(q => q + 1)} style={qtyBtn("inc")}>+</button>
                 </div>
               </div>
             )}
 
+            {/* Add to cart */}
             <button
               onClick={handleAddToCart}
               disabled={!isInStock}
-              className="w-full py-4 px-8 bg-[#3c50e0] text-white rounded-lg text-base font-semibold cursor-pointer transition-all hover:bg-[#2f40c8] hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
+              style={{
+                width: "100%",
+                padding: "14px",
+                background: added ? "#16a34a" : "#3c50e0",
+                color: "#fff",
+                borderRadius: "10px",
+                fontSize: "15px",
+                fontWeight: 600,
+                border: "none",
+                cursor: isInStock ? "pointer" : "not-allowed",
+                opacity: isInStock ? 1 : 0.5,
+                transition: "background 0.2s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                fontFamily: "inherit",
+              }}
             >
-              {isInStock ? "Add to Cart" : "Out of Stock"}
+              {added ? (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Added to Cart!
+                </>
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                  </svg>
+                  {isInStock ? "Add to Cart" : "Out of Stock"}
+                </>
+              )}
             </button>
 
-            <p className="text-sm text-gray-500">SKU: {product.sku}</p>
+            {/* Meta */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}>SKU: {product.sku}</p>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                {["Free Shipping over $80", "30-Day Returns", "Secure Checkout"].map((tag) => (
+                  <span key={tag} style={{ fontSize: "11px", padding: "3px 10px", background: "#f3f4f6", color: "#6b7280", borderRadius: "99px", border: "1px solid #e5e7eb" }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

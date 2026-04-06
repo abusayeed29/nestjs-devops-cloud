@@ -7,11 +7,11 @@ import { AuthService } from "./auth.service";
  * Axios Instance Configuration
  *
  * Creates configured axios instance with interceptors for:
- * - Adding auth tokens from Redux to requests
+ * - Adding auth tokens from Redux (persisted state) to requests
  * - Handling token refresh on 401 errors
  * - Automatic logout on auth failures
  *
- * SECURITY: Reads tokens from Redux state (in-memory) instead of localStorage
+ * SECURITY: Reads tokens from persisted Redux state (localStorage).
  */
 
 // Create axios instance with base configuration
@@ -28,8 +28,7 @@ export const apiClient = axios.create({
  *
  * Adds access token from Redux state to Authorization header.
  *
- * SECURITY CHANGE: Reads token from Redux (RAM) instead of localStorage.
- * Protects against XSS attacks targeting persistent storage.
+ * SECURITY CHANGE: Reads token from persisted Redux state (localStorage).
  */
 apiClient.interceptors.request.use(
   (config) => {

@@ -2,9 +2,14 @@ import type { Product } from "./product.types";
 
 // Cart item with quantity
 export interface CartItem {
+  id: string;
+  cartId: string;
+  productId: string;
   product: Product;
   quantity: number;
   price: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Cart state
