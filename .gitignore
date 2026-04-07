@@ -1,0 +1,44 @@
+# ── Environment files ─────────────────────────────────────
+# These patterns block every .env variant across the monorepo
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Explicit sub-directory coverage (belt-and-suspenders)
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.local.example
+
+# ── Terraform secrets ─────────────────────────────────────
+infrastructure/*.tfvars
+!infrastructure/*.tfvars.example
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.backup
+infrastructure/*.tfplan
+infra/terraform/**/*.tfvars
+!infra/terraform/**/*.tfvars.example
+infra/terraform/**/.terraform/
+infra/terraform/**/terraform.tfstate
+infra/terraform/**/terraform.tfstate.backup
+*.tfplan
+
+# ── Build artifacts ───────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/out/
+backend/dist/
+coverage/
+
+# ── OS & editor ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log

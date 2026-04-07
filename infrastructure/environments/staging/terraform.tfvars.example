@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars — never commit that file.
+
+aws_region          = "us-east-1"
+domain_name         = "staging.api.yourdomain.com"
+acm_certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERT_ID"
+github_org          = "your-github-username-or-org"
+github_repo         = "nestjs-devops"
+alert_email         = "you@example.com"
+db_username         = "postgres"
+db_password         = "staging-password-change-me"

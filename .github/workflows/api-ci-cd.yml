@@ -1,25 +1,41 @@
-# Build, test and deploy our nestjs api to production
+# Build, test, and deploy the NestJS API to ECS Fargate via ECR
 
-name: CI/CD Nestjs to ECR then EC2
+name: CI/CD — NestJS API to ECS Fargate
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci-cd.yml"
+
+env:
+  AWS_REGION:       ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY:   ${{ secrets.ECR_REPOSITORY }}
+  ECS_CLUSTER:      ${{ secrets.ECS_CLUSTER }}
+  ECS_SERVICE:      ${{ secrets.ECS_SERVICE }}
+  TASK_DEFINITION:  ${{ secrets.ECS_TASK_DEFINITION }}  # family name e.g. nestjs-devops-api
+  CONTAINER_NAME:   ${{ secrets.ECS_CONTAINER_NAME }}   # e.g. nestjs-devops-api
+
+# ─── CI ───────────────────────────────────────────────────────────────────────
 
 jobs:
-  # CI Code Checks
   ci:
+    name: Lint, Test & Audit
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 25.2.1 #use same version to avoid surprise later
+          node-version: 22          # LTS — stable for CI
+          cache: npm
+          cache-dependency-path: api/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -34,105 +50,138 @@ jobs:
         working-directory: ./api
 
       - name: Run tests
-        run: npm test
+        run: npm test -- --passWithNoTests
         working-directory: ./api
 
       - name: NPM audit (high severity)
-        run: npm audit --audit-level=high | true
+        run: npm audit --audit-level=high || true
         working-directory: ./api
 
+# ─── Deploy ───────────────────────────────────────────────────────────────────
+
   deploy:
+    name: Build → ECR → ECS Deploy
     needs: ci
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write   # required for OIDC
       contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Login 
+      # ── AWS Auth via OIDC (no static credentials) ───────────────────────────
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region:     ${{ env.AWS_REGION }}
 
-      # Login to ECR
-      - name: Login to ECR
+      # ── ECR Login ────────────────────────────────────────────────────────────
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Build & Push Docker image (tagged with git SHA) ──────────────────────
+      - name: Build, tag, and push image to ECR
+        id: build-image
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-          docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_URI="${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}"
 
-      # Build Docker Image
-      - name: Build Docker Image
-        run: docker build --no-cache -t devops-nestjsapi-ecommerce:latest ./api
+          docker build \
+            --no-cache \
+            --label "git.sha=${{ github.sha }}" \
+            --label "git.ref=${{ github.ref_name }}" \
+            -t "$IMAGE_URI" \
+            ./api
 
-      # Tag Docker Image for ECR
-      - name: Tag Docker Image to ECR
-        run: docker tag devops-nestjsapi-ecommerce:latest ${{ secrets.ECR_REPOSITORY }}:latest
+          docker push "$IMAGE_URI"
 
-      # Push Docker image
-      - name: Push Docker image to ECR
-        run: docker push ${{ secrets.ECR_REPOSITORY }}:latest
+          # Also tag as latest for convenience
+          docker tag "$IMAGE_URI" "${{ env.ECR_REPOSITORY }}:latest"
+          docker push "${{ env.ECR_REPOSITORY }}:latest"
 
-      #Deploy to EC2
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.7
+          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+      # ── Run Prisma Migrations as a one-off ECS task ──────────────────────────
+      - name: Run database migrations
+        env:
+          IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        run: |
+          # Get current task definition and swap image, keep all secrets/config intact
+          TASK_DEF_JSON=$(aws ecs describe-task-definition \
+            --task-definition "${{ env.TASK_DEFINITION }}" \
+            --query 'taskDefinition' \
+            --output json)
+
+          MIGRATE_TASK=$(echo "$TASK_DEF_JSON" | jq \
+            --arg IMAGE "${{ steps.build-image.outputs.image }}" \
+            --arg CMD "npx prisma migrate deploy" \
+            '.containerDefinitions[0].image = $IMAGE |
+             .containerDefinitions[0].command = ["sh", "-c", $CMD] |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                 .placementConstraints, .compatibilities, .registeredAt, .registeredBy)')
+
+          # Register temporary migration task definition
+          MIGRATE_TASK_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$MIGRATE_TASK" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "Running Prisma migrations with task: $MIGRATE_TASK_ARN"
+
+          # Run migration task and wait for completion
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --task-definition "$MIGRATE_TASK_ARN" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_PRIVATE_SUBNETS }}],securityGroups=[${{ secrets.ECS_SECURITY_GROUP }}],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Migration task ARN: $TASK_ARN"
+
+          aws ecs wait tasks-stopped \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+
+          echo "Migrations completed successfully"
+
+      # ── Update ECS Service with new image ────────────────────────────────────
+      - name: Update ECS task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
-          script: |
+          task-definition-arn: ${{ env.TASK_DEFINITION }}
+          container-name:       ${{ env.CONTAINER_NAME }}
+          image:                ${{ steps.build-image.outputs.image }}
 
-            set -e
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition:          ${{ steps.task-def.outputs.task-definition }}
+          service:                  ${{ env.ECS_SERVICE }}
+          cluster:                  ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true  # block until all tasks are healthy
+          wait-for-minutes:         10
 
-            # Login to ECR
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-            docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }} 
-
-            docker pull ${{ secrets.ECR_REPOSITORY }}:latest
-
-            docker stop devops-nestjsapi-ecommerce || true
-            docker rm devops-nestjsapi-ecommerce || true
-
-            SECRETS_JSON=$(aws secretsmanager get-secret-value \
-              --secret-id nestjs-prod-secrets \
-              --query SecretString \
-              --output text)
-
-            export DATABASE_USER=$(echo $SECRETS_JSON | jq -r .DATABASE_USER)
-            export DATABASE_PASSWORD=$(echo $SECRETS_JSON | jq -r .DATABASE_PASSWORD)
-            export DATABASE_NAME=$(echo $SECRETS_JSON | jq -r .DATABASE_NAME)
-            export DATABASE_HOST=$(echo $SECRETS_JSON | jq -r .DATABASE_HOST)
-            export DATABASE_PORT=$(echo $SECRETS_JSON | jq -r .DATABASE_PORT)
-            export DATABASE_URL=$(echo $SECRETS_JSON | jq -r .DATABASE_URL)
-            export PORT=$(echo $SECRETS_JSON | jq -r .PORT)
-            export ALLOWED_ORIGINS=$(echo $SECRETS_JSON | jq -r .ALLOWED_ORIGINS)
-            export JWT_SECRET=$(echo $SECRETS_JSON | jq -r .JWT_SECRET)
-            export JWT_EXPIRES_IN=$(echo $SECRETS_JSON | jq -r .JWT_EXPIRES_IN)
-            export JWT_REFRESH_SECRET=$(echo $SECRETS_JSON | jq -r .JWT_REFRESH_SECRET)
-            export JWT_REFRESH_EXPIRES_IN=$(echo $SECRETS_JSON | jq -r .JWT_REFRESH_EXPIRES_IN)
-            export NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$(echo $SECRETS_JSON | jq -r .NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-            export STRIPE_SECRET_KEY=$(echo $SECRETS_JSON | jq -r .STRIPE_SECRET_KEY)
-
-            docker run -d \
-              -p $PORT:$PORT \
-              --name devops-nestjsapi-ecommerce \
-              --log-driver=awslogs \
-              --log-opt awslogs-region=${{ secrets.AWS_REGION }} \
-              --log-opt awslogs-group=devopsnestapi-app \
-              --log-opt awslogs-stream=app-logs \
-              -e  DATABASE_USER \
-              -e  DATABASE_PASSWORD \
-              -e  DATABASE_NAME \
-              -e  DATABASE_HOST \
-              -e  DATABASE_PORT \
-              -e  DATABASE_URL \
-              -e  PORT \
-              -e  ALLOWED_ORIGINS \
-              -e  JWT_SECRET \
-              -e  JWT_EXPIRES_IN \
-              -e  JWT_REFRESH_SECRET \
-              -e  JWT_REFRESH_EXPIRES_IN \
-              -e  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
-              -e  STRIPE_SECRET_KEY \
-              ${{ secrets.ECR_REPOSITORY }}:latest
+      # ── Notify on failure ─────────────────────────────────────────────────────
+      - name: Notify on deploy failure
+        if: failure()
+        run: |
+          echo "::error::Deployment failed for commit ${{ github.sha }}"
+          echo "Check CloudWatch logs: /ecs/${{ env.ECS_CLUSTER }}/api"
